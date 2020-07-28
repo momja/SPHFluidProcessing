@@ -18,7 +18,7 @@ void setup() {
 
     unlitShader = loadShader("unlit_frag.glsl", "unlit_vert.glsl");
 
-    fluid = new Fluid(400);
+    fluid = new Fluid(2000);
 }
 
 void draw() {
@@ -29,10 +29,14 @@ void draw() {
     if(!paused) {
         update(1.f/frameRate);
     }
-
+    
+    float drawTime = -millis();
     fluid.draw();
+    drawTime += millis();
+    // print("Draw Time (ms):\t");
+    // println(drawTime);
 }
 
 void update(float dt) {
-    fluid.update(0.01);
+    fluid.update(0.012);
 }

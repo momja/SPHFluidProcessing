@@ -11,6 +11,8 @@ class Particle implements OctantInsertable {
     float pressure;
     float pressureN;
 
+    PShape particleShape;
+
 
     public Particle(Vec3 pos, Float smoothingRadius) {
         this.pos = pos;
@@ -37,13 +39,14 @@ class Particle implements OctantInsertable {
 
     public void draw() {
         push();
-        noStroke();
-        fill(0,50,180);
-        translate(this.pos.x, this.pos.y, this.pos.z);
-        sphere(this.radius);
-        // stroke(0,50,180,100);
-        // strokeWeight(20);
-        // point(this.pos.x, this.pos.y, this.pos.z);
+        if (this.particleShape != null) {
+            translate(this.pos.x, this.pos.y, this.pos.z);
+            shape(this.particleShape);
+        } else {
+            stroke(0,50,180);
+            strokeWeight(20);
+            point(this.pos.x, this.pos.y, this.pos.z);
+        }
         pop();
     }
 

@@ -1,33 +1,42 @@
 // Max Omdal 2020
+import java.util.HashSet;
 
 class Fluid {
     ArrayList<Particle> particles;
     ArrayList<ParticlePair> pairs; 
     Octree<Particle> octree;
-    float timeStepSize = 0.0003;
-    int octantCapacity = 20;
-    Vec3 gravity = new Vec3(0,-10000,0);
-    Vec3 boundMax = new Vec3(0.2,1,0.5);
-    Vec3 boundMin = new Vec3(-0.2,0,-0.5);
+    float timeStepSize = 0.003;
+    int octantCapacity = 10;
+    Vec3 gravity = new Vec3(0,-1000,0);
+    Vec3 boundMax = new Vec3(0.1,1,10);
+    Vec3 boundMin = new Vec3(-0.1,0,-10);
 
     // Fluid Parameters
-    float K_smoothingRadius = 0.03;
+    float K_smoothingRadius = 0.04;
     float K_stiff = 5;
     float K_stiffN = 8;
     float K_restDensity = 0.5;
+
+    PShape particleShape;
 
 
     public Fluid(int particleCount) {
         particles = new ArrayList<Particle>();
         pairs = new ArrayList<ParticlePair>();
-        Octant octPts = new Octant(new Vec3(0,0.5,0), new Vec3(10,10,10));
+        Octant octPts = new Octant(new Vec3(0,9,0), new Vec3(10,20,10));
         octree = new Octree<Particle>(octPts, this.octantCapacity);
-        for (int i = 0; i < particleCount; i++) {
-            float randX = random(boundMin.x,boundMax.x);
-            float randY = random(boundMin.y,boundMax.y);
-            float randZ = random(boundMin.z,boundMax.z);
-            addParticle(new Vec3(randX, randY, randZ));
+        this.particleShape = createShape(SPHERE, 0.04);
+        this.particleShape.setStrokeWeight(0);
+        this.particleShape.setFill(color(0,50,180));
+        for (int i = 0; i < particleCount/10; i++) {
+            for (int j = 0; j < 10; j++) {
+                float randX = random(-0.01, 0.01);
+                float randY = ((float)i)/30 + random(-0.01, 0.01);
+                float randZ = ((float)j)/30 + random(-0.01, 0.01);
+                addParticle(new Vec3(randX, randY, randZ));
+            }
         }
+
 
         // Populate Octree
         updateOctree();
@@ -35,10 +44,12 @@ class Fluid {
 
     public void addParticle(Vec3 pos) {
         Particle newPart = new Particle(pos, this.K_smoothingRadius);
+        newPart.particleShape = this.particleShape;
         particles.add(newPart);
     }
 
     private void createPair(Particle p1, Particle p2, float dist) {
+        if (p1 == p2) return;
         ParticlePair newPair = new ParticlePair(p1, p2);
         newPair.q = 1 - dist / (K_smoothingRadius*2);
         this.pairs.add(newPair);
@@ -54,22 +65,22 @@ class Fluid {
 
     private void constrainToBounds(Particle p) {
         float friction = 0.2;
-        // if (p.pos.x < boundMin.x) {
-        //     Vec3 normal = new Vec3(1,0,0);
-        //     Vec3 vNormal = normal.times(dot(p.vel, normal));
-        //     Vec3 vTangent = p.vel.minus(vNormal);
-        //     Vec3 impulse = vNormal.minus(vTangent.times(friction));
-        //     // p.pos.x = boundMin.x;
-        //     p.vel.add(impulse);
-        // }
-        // if (p.pos.x >= boundMax.x) {
-        //     Vec3 normal = new Vec3(-1,0,0);
-        //     Vec3 vNormal = normal.times(dot(p.vel, normal));
-        //     Vec3 vTangent = p.vel.minus(vNormal);
-        //     Vec3 impulse = vNormal.minus(vTangent.times(friction));
-        //     // p.pos.x = boundMax.x;
-        //     p.vel.add(impulse);            
-        // }
+        if (p.pos.x < boundMin.x) {
+            Vec3 normal = new Vec3(1,0,0);
+            Vec3 vNormal = normal.times(dot(p.vel, normal));
+            Vec3 vTangent = p.vel.minus(vNormal);
+            Vec3 impulse = vNormal.minus(vTangent.times(friction));
+            // p.pos.x = boundMin.x;
+            p.vel.add(impulse);
+        }
+        if (p.pos.x >= boundMax.x) {
+            Vec3 normal = new Vec3(-1,0,0);
+            Vec3 vNormal = normal.times(dot(p.vel, normal));
+            Vec3 vTangent = p.vel.minus(vNormal);
+            Vec3 impulse = vNormal.minus(vTangent.times(friction));
+            // p.pos.x = boundMax.x;
+            p.vel.add(impulse);            
+        }
         if (p.pos.y < boundMin.y) {
             Vec3 normal = new Vec3(0,1,0);
             Vec3 vNormal = normal.times(dot(p.vel, normal));
@@ -86,26 +97,30 @@ class Fluid {
         //     // p.pos.y = boundMax.y;
         //     p.vel.add(impulse);
         // }
-        // if (p.pos.z < boundMin.z) {
-        //     Vec3 normal = new Vec3(0,0,1);
-        //     Vec3 vNormal = normal.times(dot(p.vel, normal));
-        //     Vec3 vTangent = p.vel.minus(vNormal);
-        //     Vec3 impulse = vNormal.minus(vTangent.times(friction));
-        //     // p.pos.z = boundMin.z;
-        //     p.vel.add(impulse);
-        // }
-        // if (p.pos.z >= boundMax.z) {
-        //     Vec3 normal = new Vec3(0,0,-1);
-        //     Vec3 vNormal = normal.times(dot(p.vel, normal));
-        //     Vec3 vTangent = p.vel.minus(vNormal);
-        //     Vec3 impulse = vNormal.minus(vTangent.times(friction));
-        //     // p.pos.z = boundMax.z;
-        //     p.vel.add(impulse);
-        // }
+        if (p.pos.z < boundMin.z) {
+            Vec3 normal = new Vec3(0,0,1);
+            Vec3 vNormal = normal.times(dot(p.vel, normal));
+            Vec3 vTangent = p.vel.minus(vNormal);
+            Vec3 impulse = vNormal.minus(vTangent.times(friction));
+            // p.pos.z = boundMin.z;
+            p.vel.add(impulse);
+        }
+        if (p.pos.z >= boundMax.z) {
+            Vec3 normal = new Vec3(0,0,-1);
+            Vec3 vNormal = normal.times(dot(p.vel, normal));
+            Vec3 vTangent = p.vel.minus(vNormal);
+            Vec3 impulse = vNormal.minus(vTangent.times(friction));
+            // p.pos.z = boundMax.z;
+            p.vel.add(impulse);
+        }
         p.pos.add(p.vel.times(timeStepSize));
     }
 
     public void update(float dt) {
+        float pairTime = 0;
+        float doubleDensityTime = 0;
+        float collisionTime = 0;
+
         int timeSteps = ceil(dt/timeStepSize);
 
         this.pairs = new ArrayList<ParticlePair>();
@@ -121,24 +136,46 @@ class Fluid {
                 p.density = p.densityN = 0;
             }
 
+            pairTime -= millis();
             updatePairs();
+            pairTime += millis();
+            doubleDensityTime -= millis();
             doubleDensityRelaxation();
+            doubleDensityTime += millis();
+            collisionTime -= millis();
             resolveCollisions();
+            collisionTime += millis();
         }
+        // print("Time to make pairs (ms):\t");
+        // println(pairTime);
+        // print("Time to compute pos (ms):\t");
+        // println(doubleDensityTime);
+        // print("Time to compute coll (ms):\t");
+        // println(collisionTime);
+        // print("Avg number of neighbors:\t");
+        // println(averageNoNbrs);
+        // println();
     }
 
+    float averageNoNbrs = 0;
+
     public void updatePairs() {
+        averageNoNbrs = 0;
         updateOctree();
         for (Particle p1 : particles) {
+            HashSet<Particle> checkedParticles = new HashSet<Particle>();
             ArrayList<Particle> otherParticles = octree.inSameOctant(p1);
             for (Particle p2 : otherParticles) {
                 if (p1 == p2) continue;
-
+                if (checkedParticles.contains(p2)) continue;
+                checkedParticles.add(p2);
+                averageNoNbrs++;
                 float dist = p1.distance(p2);
                 if (dist < K_smoothingRadius*2)
                     createPair(p1, p2, dist);
             }
         }
+        averageNoNbrs /= particles.size();
     }
 
     public void doubleDensityRelaxation() {

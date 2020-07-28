@@ -1,4 +1,6 @@
 // Max Omdal 2020
+import java.util.HashSet;
+
 
 class Octree<T extends OctantInsertable> {
     Octant bounds;
@@ -7,7 +9,7 @@ class Octree<T extends OctantInsertable> {
     boolean divided = false;
     ArrayList<Octree<T>> children;
     int depth;
-    int maxDepth = 8;
+    int maxDepth = 6;
 
     public Octree(Octant bounds, int capacity) {
         this.bounds = bounds;
@@ -92,18 +94,6 @@ class Octree<T extends OctantInsertable> {
                 // Recursively divide
                 // ArrayList<T> newPts;
                 for (Octree<T> child : children) {
-                    // newPts = child.inSameOctant(p);
-                    // for (int i = 0; i < newPts.size(); i++) {
-                    //     T pt = newPts.get(i);
-                    //     for (T pt2 : pointsInOctants) {
-                    //         // Make sure there's no duplicates
-                    //         if (pt == pt2) {
-                    //             newPts.remove(i);
-                    //             i--;
-                    //             break;
-                    //         }
-                    //     }
-                    // }
                     pointsInOctants.addAll(child.inSameOctant(p));
                 }
             } else {
