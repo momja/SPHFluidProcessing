@@ -1,7 +1,7 @@
 // Max Omdal 2020
 
 class Particle implements OctantInsertable {
-    float radius = 0.1;
+    float radius = 0.04;
     Float smoothingRadius;
     Vec3 pos;
     Vec3 oldPos;
@@ -41,6 +41,9 @@ class Particle implements OctantInsertable {
         fill(0,50,180);
         translate(this.pos.x, this.pos.y, this.pos.z);
         sphere(this.radius);
+        // stroke(0,50,180,100);
+        // strokeWeight(20);
+        // point(this.pos.x, this.pos.y, this.pos.z);
         pop();
     }
 

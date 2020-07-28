@@ -18,7 +18,7 @@ void setup() {
 
     unlitShader = loadShader("unlit_frag.glsl", "unlit_vert.glsl");
 
-    fluid = new Fluid(80);
+    fluid = new Fluid(400);
 }
 
 void draw() {
@@ -34,5 +34,5 @@ void draw() {
 }
 
 void update(float dt) {
-    fluid.update(0.015);
+    fluid.update(0.01);
 }

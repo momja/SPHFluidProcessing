@@ -34,7 +34,7 @@ public void setup() {
 
     unlitShader = loadShader("unlit_frag.glsl", "unlit_vert.glsl");
 
-    fluid = new Fluid(80);
+    fluid = new Fluid(400);
 }
 
 public void draw() {
@@ -50,7 +50,7 @@ public void draw() {
 }
 
 public void update(float dt) {
-    fluid.update(0.015f);
+    fluid.update(0.01f);
 }
 class Camera {
     Vec3 camLocation = new Vec3(0,0,0);
@@ -95,23 +95,23 @@ class Fluid {
     ArrayList<Particle> particles;
     ArrayList<ParticlePair> pairs; 
     Octree<Particle> octree;
-    float timeStepSize = 0.001f;
-    int octantCapacity = 2;
-    Vec3 gravity = new Vec3(0,-1000,0);
-    Vec3 boundMax = new Vec3(1,2,1);
-    Vec3 boundMin = new Vec3(-1,0,-1);
+    float timeStepSize = 0.0003f;
+    int octantCapacity = 20;
+    Vec3 gravity = new Vec3(0,-10000,0);
+    Vec3 boundMax = new Vec3(0.2f,1,0.5f);
+    Vec3 boundMin = new Vec3(-0.2f,0,-0.5f);
 
     // Fluid Parameters
-    float K_smoothingRadius = 0.2f;
-    float K_stiff = 50;
-    float K_stiffN = 20;
-    float K_restDensity = 5;
+    float K_smoothingRadius = 0.03f;
+    float K_stiff = 5;
+    float K_stiffN = 8;
+    float K_restDensity = 0.5f;
 
 
     public Fluid(int particleCount) {
         particles = new ArrayList<Particle>();
         pairs = new ArrayList<ParticlePair>();
-        Octant octPts = new Octant(new Vec3(0,1,0), new Vec3(2,2,2));
+        Octant octPts = new Octant(new Vec3(0,0.5f,0), new Vec3(10,10,10));
         octree = new Octree<Particle>(octPts, this.octantCapacity);
         for (int i = 0; i < particleCount; i++) {
             float randX = random(boundMin.x,boundMax.x);
@@ -121,7 +121,7 @@ class Fluid {
         }
 
         // Populate Octree
-        // updateOctree();
+        updateOctree();
     }
 
     public void addParticle(Vec3 pos) {
@@ -129,14 +129,10 @@ class Fluid {
         particles.add(newPart);
     }
 
-    private void createPair(Particle p1, Particle p2) {
+    private void createPair(Particle p1, Particle p2, float dist) {
         ParticlePair newPair = new ParticlePair(p1, p2);
-        for (ParticlePair pair : pairs) {
-            if (pair.equals(newPair)) {
-                return;
-            }
-        }
-        this.pairs.add(new ParticlePair(p1, p2));
+        newPair.q = 1 - dist / (K_smoothingRadius*2);
+        this.pairs.add(newPair);
     }
 
     private void updateOctree() {
@@ -148,69 +144,99 @@ class Fluid {
     }
 
     private void constrainToBounds(Particle p) {
-        if (p.pos.x < boundMin.x) {
-            // p.pos.x = boundMin.x;
-            p.vel.add(new Vec3(5.1f,0,0));
-        }
-        if (p.pos.x >= boundMax.x) {
-            // p.pos.x = boundMax.x;
-            p.vel.add(new Vec3(-5.1f,0,0));
-        }
+        float friction = 0.2f;
+        // if (p.pos.x < boundMin.x) {
+        //     Vec3 normal = new Vec3(1,0,0);
+        //     Vec3 vNormal = normal.times(dot(p.vel, normal));
+        //     Vec3 vTangent = p.vel.minus(vNormal);
+        //     Vec3 impulse = vNormal.minus(vTangent.times(friction));
+        //     // p.pos.x = boundMin.x;
+        //     p.vel.add(impulse);
+        // }
+        // if (p.pos.x >= boundMax.x) {
+        //     Vec3 normal = new Vec3(-1,0,0);
+        //     Vec3 vNormal = normal.times(dot(p.vel, normal));
+        //     Vec3 vTangent = p.vel.minus(vNormal);
+        //     Vec3 impulse = vNormal.minus(vTangent.times(friction));
+        //     // p.pos.x = boundMax.x;
+        //     p.vel.add(impulse);            
+        // }
         if (p.pos.y < boundMin.y) {
-            // p.pos.y = boundMin.y;
-            p.vel.add(new Vec3(0,5.1f,0));
+            Vec3 normal = new Vec3(0,1,0);
+            Vec3 vNormal = normal.times(dot(p.vel, normal));
+            Vec3 vTangent = p.vel.minus(vNormal);
+            Vec3 impulse = vNormal.minus(vTangent.times(friction));
+            p.pos.y = boundMin.y;
+            p.vel.add(impulse);
         }
-        if (p.pos.y >= boundMax.y) {
-            // p.pos.y = boundMax.y;
-            p.vel.add(new Vec3(0,-5.1f,0));
-        }
-        if (p.pos.z < boundMin.z) {
-            // p.pos.z = boundMin.z;
-            p.vel.add(new Vec3(0,0,5.1f));
-        }
-        if (p.pos.z >= boundMax.z) {
-            // p.pos.z = boundMax.z;
-            p.vel.add(new Vec3(0,0,-5.1f));
-        }
+        // if (p.pos.y >= boundMax.y) {
+        //     Vec3 normal = new Vec3(0,-1,0);
+        //     Vec3 vNormal = normal.times(dot(p.vel, normal));
+        //     Vec3 vTangent = p.vel.minus(vNormal);
+        //     Vec3 impulse = vNormal.minus(vTangent.times(friction));
+        //     // p.pos.y = boundMax.y;
+        //     p.vel.add(impulse);
+        // }
+        // if (p.pos.z < boundMin.z) {
+        //     Vec3 normal = new Vec3(0,0,1);
+        //     Vec3 vNormal = normal.times(dot(p.vel, normal));
+        //     Vec3 vTangent = p.vel.minus(vNormal);
+        //     Vec3 impulse = vNormal.minus(vTangent.times(friction));
+        //     // p.pos.z = boundMin.z;
+        //     p.vel.add(impulse);
+        // }
+        // if (p.pos.z >= boundMax.z) {
+        //     Vec3 normal = new Vec3(0,0,-1);
+        //     Vec3 vNormal = normal.times(dot(p.vel, normal));
+        //     Vec3 vTangent = p.vel.minus(vNormal);
+        //     Vec3 impulse = vNormal.minus(vTangent.times(friction));
+        //     // p.pos.z = boundMax.z;
+        //     p.vel.add(impulse);
+        // }
+        p.pos.add(p.vel.times(timeStepSize));
     }
 
     public void update(float dt) {
         int timeSteps = ceil(dt/timeStepSize);
-        float finalStepSize = dt % timeStepSize;
 
         this.pairs = new ArrayList<ParticlePair>();
 
         for (int i = 0; i < timeSteps; i++) {
             float stepSize = timeStepSize;
-            if (i == timeSteps - 1) stepSize = finalStepSize;
-            // TODO: Numerical integration goes here
+
             for (Particle p : particles) {
-                p.vel = p.pos.minus(p.oldPos);
-                constrainToBounds(p);
+                p.vel = p.pos.minus(p.oldPos).times(1.f/stepSize);
                 p.oldPos = p.pos;
                 p.vel.add(gravity.times(stepSize));
                 p.pos.add(p.vel.times(stepSize));
                 p.density = p.densityN = 0;
             }
 
-            // updateOctree();
+            updatePairs();
+            doubleDensityRelaxation();
+            resolveCollisions();
+        }
+    }
 
-            // TODO : Use Octree for time speedup
-            for (Particle p1 : particles) {
-                // ArrayList<Particle> otherParticles = octree.inSameOctant(p1);
-                for (Particle p2 : particles) {
-                    if (p1 == p2)
-                        continue;
-                    if (p1.distance(p2) < K_smoothingRadius)
-                        createPair(p1, p2);
-                }
+    public void updatePairs() {
+        updateOctree();
+        for (Particle p1 : particles) {
+            ArrayList<Particle> otherParticles = octree.inSameOctant(p1);
+            for (Particle p2 : otherParticles) {
+                if (p1 == p2) continue;
+
+                float dist = p1.distance(p2);
+                if (dist < K_smoothingRadius*2)
+                    createPair(p1, p2, dist);
             }
+        }
+    }
 
-            for (ParticlePair pair : pairs) {
+    public void doubleDensityRelaxation() {
+        for (ParticlePair pair : pairs) {
                 Particle A = pair.p1;
                 Particle B = pair.p2;
 
-                pair.q = 1 - A.distance(B) / K_smoothingRadius;
                 pair.q2 = pow(pair.q, 2);
                 pair.q3 = pow(pair.q, 3);
                 
@@ -231,18 +257,18 @@ class Fluid {
                 
                 float pressure = A.pressure + B.pressure;
                 float pressureN = A.pressureN + B.pressureN;
-                float displace = (pressure*pair.q + pressureN*pair.q2) * pow(stepSize, 2);
+                float displace = (pressure*pair.q + pressureN*pair.q2) * pow(timeStepSize, 2);
                 Vec3 a2bn = A.dirNormal(B);
-                Vec3 displaceVec = a2bn.times(displace);
+                Vec3 displaceVec = a2bn.times(displace/2);
                 A.pos.subtract(displaceVec);
                 B.pos.add(displaceVec);
             }
-
-        }
     }
 
-    public void checkForCollisions(PShape[] rigidBodies) {
-        // TODO : Implement
+    public void resolveCollisions() {
+        for (Particle p : particles) {
+            constrainToBounds(p);
+        }
     }
 
     public void draw() {
@@ -358,20 +384,21 @@ class Octree<T extends OctantInsertable> {
     int capacity;
     ArrayList<T> points;
     boolean divided = false;
-
-    Octree<T> q111,q011,q001,q101,q110,q010,q000,q100;
+    ArrayList<Octree<T>> children;
+    int depth;
+    int maxDepth = 8;
 
     public Octree(Octant bounds, int capacity) {
         this.bounds = bounds;
         this.capacity = capacity;
         this.points = new ArrayList<T>();
+        this.depth = 0;
     }
 
     public void clear() {
         this.points = new ArrayList<T>();
         this.divided = false;
-
-        q111 = q011 = q001 = q101 = q110 = q010 = q000 = q100 = null;
+        this.children = new ArrayList<Octree<T>>();
     }
 
     public void insert(T p) {
@@ -379,34 +406,23 @@ class Octree<T extends OctantInsertable> {
             return;
         }
 
-        if (!this.divided && this.points.size() < this.capacity) {
+        if (this.depth == this.maxDepth || (!this.divided && this.points.size() < this.capacity)) {
             this.points.add(p);
+        } else if (!this.divided) {
+            this.points.add(p);
+            subdivide();
         } else {
-            if (!this.divided) {
-                subdivide();
+            for (Octree<T> child : children) {
+                child.insert(p);
             }
-
-            q111.insert(p);
-            q011.insert(p);
-            q001.insert(p);
-            q101.insert(p);
-            q110.insert(p);
-            q010.insert(p);
-            q000.insert(p);
-            q100.insert(p);
         }
     }
 
     public void show(boolean withPoints) {
         if (this.divided) {
-            q111.show(withPoints);
-            q011.show(withPoints);
-            q001.show(withPoints);
-            q101.show(withPoints);
-            q110.show(withPoints);
-            q010.show(withPoints);
-            q000.show(withPoints);
-            q100.show(withPoints);
+            for (Octree<T> child : children) {
+                child.show(withPoints);
+            }
         } else {
             pushMatrix();
             strokeWeight(0.8f);
@@ -430,20 +446,14 @@ class Octree<T extends OctantInsertable> {
 
     public ArrayList<T> rayIntersectsOctants(Ray3 ray) {
         // Gets all octants that the ray is in and returns the points stored in those octants
-        
         ArrayList<T> pointsInOctants = new ArrayList<T>();
         
         if (bounds.rayIntersects(ray)) {
             if (divided) {
                 // Recursively divide
-                pointsInOctants.addAll(q111.rayIntersectsOctants(ray));
-                pointsInOctants.addAll(q011.rayIntersectsOctants(ray));
-                pointsInOctants.addAll(q001.rayIntersectsOctants(ray));
-                pointsInOctants.addAll(q101.rayIntersectsOctants(ray));
-                pointsInOctants.addAll(q110.rayIntersectsOctants(ray));
-                pointsInOctants.addAll(q010.rayIntersectsOctants(ray));
-                pointsInOctants.addAll(q000.rayIntersectsOctants(ray));
-                pointsInOctants.addAll(q100.rayIntersectsOctants(ray));
+                for (Octree<T> child : children) {
+                    pointsInOctants.addAll(child.rayIntersectsOctants(ray));
+                }
             } else {
                 // Just add the points in this oct
                 pointsInOctants.addAll(this.points);
@@ -459,18 +469,26 @@ class Octree<T extends OctantInsertable> {
         if (p.inOctant(bounds)) {
             if (divided) {
                 // Recursively divide
-                pointsInOctants.addAll(q111.inSameOctant(p));
-                pointsInOctants.addAll(q011.inSameOctant(p));
-                pointsInOctants.addAll(q001.inSameOctant(p));
-                pointsInOctants.addAll(q101.inSameOctant(p));
-                pointsInOctants.addAll(q110.inSameOctant(p));
-                pointsInOctants.addAll(q010.inSameOctant(p));
-                pointsInOctants.addAll(q000.inSameOctant(p));
-                pointsInOctants.addAll(q100.inSameOctant(p));
+                // ArrayList<T> newPts;
+                for (Octree<T> child : children) {
+                    // newPts = child.inSameOctant(p);
+                    // for (int i = 0; i < newPts.size(); i++) {
+                    //     T pt = newPts.get(i);
+                    //     for (T pt2 : pointsInOctants) {
+                    //         // Make sure there's no duplicates
+                    //         if (pt == pt2) {
+                    //             newPts.remove(i);
+                    //             i--;
+                    //             break;
+                    //         }
+                    //     }
+                    // }
+                    pointsInOctants.addAll(child.inSameOctant(p));
+                }
             } else {
                 // Just add the points in this oct
-            }
                 pointsInOctants.addAll(this.points);
+            }
         }
 
         return pointsInOctants;
@@ -480,36 +498,33 @@ class Octree<T extends OctantInsertable> {
         Vec3 origin = bounds.origin;
         Vec3 size = bounds.size;
         Vec3 subdivideSize = size.times(0.5f);
+        this.children = new ArrayList<Octree<T>>();
 
-        Octant q111_b = new Octant(origin.plus(subdivideSize.times(new Vec3(0.5f,0.5f,0.5f))), subdivideSize);
-        Octant q011_b = new Octant(origin.plus(subdivideSize.times(new Vec3(-0.5f,0.5f,0.5f))), subdivideSize);
-        Octant q001_b = new Octant(origin.plus(subdivideSize.times(new Vec3(-0.5f,-0.5f,0.5f))), subdivideSize);
-        Octant q101_b = new Octant(origin.plus(subdivideSize.times(new Vec3(0.5f,-0.5f,0.5f))), subdivideSize);
-        Octant q110_b = new Octant(origin.plus(subdivideSize.times(new Vec3(0.5f,0.5f,-0.5f))), subdivideSize);
-        Octant q010_b = new Octant(origin.plus(subdivideSize.times(new Vec3(-0.5f,0.5f,-0.5f))), subdivideSize);
-        Octant q000_b = new Octant(origin.plus(subdivideSize.times(new Vec3(-0.5f,-0.5f,-0.5f))), subdivideSize);
-        Octant q100_b = new Octant(origin.plus(subdivideSize.times(new Vec3(0.5f,-0.5f,-0.5f))), subdivideSize);
-        q111 = new Octree<T>(q111_b, capacity);
-        q011 = new Octree<T>(q011_b, capacity);
-        q001 = new Octree<T>(q001_b, capacity);
-        q101 = new Octree<T>(q101_b, capacity);
-        q110 = new Octree<T>(q110_b, capacity);
-        q010 = new Octree<T>(q010_b, capacity);
-        q000 = new Octree<T>(q000_b, capacity);
-        q100 = new Octree<T>(q100_b, capacity);
+        Vec3[] octantSections = new Vec3[]{
+            new Vec3(0.5f,0.5f,0.5f),
+            new Vec3(-0.5f,0.5f,0.5f),
+            new Vec3(-0.5f,-0.5f,0.5f),
+            new Vec3(0.5f,-0.5f,0.5f),
+            new Vec3(0.5f,0.5f,-0.5f),
+            new Vec3(-0.5f,0.5f,-0.5f),
+            new Vec3(-0.5f,-0.5f,-0.5f),
+            new Vec3(0.5f,-0.5f,-0.5f)
+        };
+        
+        for (int i = 0; i < 8; i++) {
+            Octant octant = new Octant(origin.plus(subdivideSize.times(octantSections[i])), subdivideSize);
+            Octree<T> child = new Octree<T>(octant, capacity);
+            child.depth = this.depth + 1;
+            this.children.add(child);
+        }
 
-        // for (T p : points) {
-        //     q111.insert(p);
-        //     q011.insert(p);
-        //     q001.insert(p);
-        //     q101.insert(p);
-        //     q110.insert(p);
-        //     q010.insert(p);
-        //     q000.insert(p);
-        //     q100.insert(p);
-        // }
+        for (T p : points) {
+            for (Octree<T> child : children) {
+                child.insert(p);
+            }
+        }
 
-        // points = new ArrayList<T>();
+        points = new ArrayList<T>();
 
         this.divided = true;
     }
@@ -518,7 +533,7 @@ class Octree<T extends OctantInsertable> {
 // Max Omdal 2020
 
 class Particle implements OctantInsertable {
-    float radius = 0.1f;
+    float radius = 0.04f;
     Float smoothingRadius;
     Vec3 pos;
     Vec3 oldPos;
@@ -558,6 +573,9 @@ class Particle implements OctantInsertable {
         fill(0,50,180);
         translate(this.pos.x, this.pos.y, this.pos.z);
         sphere(this.radius);
+        // stroke(0,50,180,100);
+        // strokeWeight(20);
+        // point(this.pos.x, this.pos.y, this.pos.z);
         pop();
     }
 
