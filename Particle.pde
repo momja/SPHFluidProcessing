@@ -93,6 +93,9 @@ class ParticlePair {
     Particle p1;
     Particle p2;
 
+    float dist;
+    Vec3 btwnDir;
+
     float q;
     float q2;
     float q3;
@@ -100,6 +103,10 @@ class ParticlePair {
     public ParticlePair(Particle p1, Particle p2) {
         this.p1 = p1;
         this.p2 = p2;
+        btwnDir = p2.pos.minus(p1.pos);
+        if (btwnDir.length() > 0.0000000001) {
+            btwnDir.normalize();
+        }
     }
 
     public boolean equals(ParticlePair pair) {

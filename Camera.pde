@@ -3,7 +3,7 @@ class Camera {
     Vec3 camLookAt = new Vec3(0,0,0);
     Vec3 camUp = new Vec3(0,-1,0);
     float radius = 3;
-    int slider = 0;
+    int slider = 50;
     float theta = 0;
     float fov = 55;
     float nearPlaneW = 1 + 1.f/3;

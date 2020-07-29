@@ -9,7 +9,7 @@ class Octree<T extends OctantInsertable> {
     boolean divided = false;
     ArrayList<Octree<T>> children;
     int depth;
-    int maxDepth = 6;
+    int maxDepth = 10;
 
     public Octree(Octant bounds, int capacity) {
         this.bounds = bounds;
